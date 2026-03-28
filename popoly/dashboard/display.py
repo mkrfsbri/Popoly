@@ -248,6 +248,8 @@ class Dashboard:
                 "OPEN": "yellow",
                 "CLOSED": "green",
                 "CANCELLED": "red",
+                "CLAIMED": "bold green",
+                "MERGED": "cyan",
             }.get(t.status.value, "white")
 
             table.add_row(

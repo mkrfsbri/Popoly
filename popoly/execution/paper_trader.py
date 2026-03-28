@@ -68,6 +68,8 @@ class PaperTrader:
             edge=opp.edge,
             confidence=intent.confidence,
             paper=True,
+            condition_id=opp.condition_id,
+            token_id=opp.token_id,
             status=TradeStatus.OPEN,
         )
 

@@ -13,19 +13,21 @@ logger = logging.getLogger(__name__)
 
 _CREATE_TRADES = """
 CREATE TABLE IF NOT EXISTS trades (
-    id          TEXT PRIMARY KEY,
-    timestamp   REAL    NOT NULL,
-    asset       TEXT    NOT NULL,
-    direction   TEXT    NOT NULL,
-    timeframe   TEXT    NOT NULL,
-    side        TEXT    NOT NULL,
-    size_usd    REAL    NOT NULL,
-    price       REAL    NOT NULL,
-    edge        REAL    NOT NULL,
-    confidence  REAL    NOT NULL,
-    paper       INTEGER NOT NULL,
-    pnl         REAL,
-    status      TEXT    NOT NULL
+    id           TEXT PRIMARY KEY,
+    timestamp    REAL    NOT NULL,
+    asset        TEXT    NOT NULL,
+    direction    TEXT    NOT NULL,
+    timeframe    TEXT    NOT NULL,
+    side         TEXT    NOT NULL,
+    size_usd     REAL    NOT NULL,
+    price        REAL    NOT NULL,
+    edge         REAL    NOT NULL,
+    confidence   REAL    NOT NULL,
+    paper        INTEGER NOT NULL,
+    condition_id TEXT    NOT NULL DEFAULT '',
+    token_id     TEXT    NOT NULL DEFAULT '',
+    pnl          REAL,
+    status       TEXT    NOT NULL
 )
 """
 
@@ -92,8 +94,9 @@ class Database:
             """
             INSERT INTO trades
                 (id, timestamp, asset, direction, timeframe, side,
-                 size_usd, price, edge, confidence, paper, pnl, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 size_usd, price, edge, confidence, paper,
+                 condition_id, token_id, pnl, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 trade.id,
@@ -107,6 +110,8 @@ class Database:
                 trade.edge,
                 trade.confidence,
                 int(trade.paper),
+                trade.condition_id,
+                trade.token_id,
                 trade.pnl,
                 str(trade.status),
             ),
@@ -184,9 +189,9 @@ class Database:
                 COALESCE(SUM(CASE WHEN pnl <= 0 THEN 1 ELSE 0 END), 0) AS loss_count,
                 COALESCE(SUM(pnl), 0.0) AS total_pnl
             FROM trades
-            WHERE status = ? AND pnl IS NOT NULL
+            WHERE status IN (?, ?) AND pnl IS NOT NULL
             """,
-            (str(TradeStatus.CLOSED),),
+            (str(TradeStatus.CLOSED), str(TradeStatus.CLAIMED)),
         )
         row = await cursor.fetchone()
         if row is None:

@@ -85,17 +85,23 @@ class Executor:
             if trade is None:
                 return None
 
-        # Record in portfolio and position manager.
+        # Record in portfolio.
         self._portfolio.record_trade(trade, is_entry=True)
-        self._positions.add_position(trade)
+
+        # Add to position manager (may auto-merge with existing).
+        result = self._positions.add_position(trade)
+        merged = result.id != trade.id or result.size_usd != trade.size_usd
 
         # Persist to database.
         await self._save(trade)
 
         # Send Telegram notification.
-        await self._notify_entry(trade)
+        if merged:
+            await self._notify_merge(trade, result)
+        else:
+            await self._notify_entry(trade)
 
-        return trade
+        return result
 
     # ------------------------------------------------------------------
     # Exit
@@ -213,6 +219,8 @@ class Executor:
             edge=opp.edge,
             confidence=intent.confidence,
             paper=False,
+            condition_id=opp.condition_id,
+            token_id=opp.token_id,
             status=TradeStatus.OPEN,
         )
         return trade
@@ -240,6 +248,17 @@ class Executor:
             f"{trade.timeframe} {trade.side}\n"
             f"Size: ${trade.size_usd:.2f}  Price: {trade.price:.4f}  "
             f"Edge: {trade.edge:.2%}  Confidence: {trade.confidence:.2%}"
+        )
+        await self._send_telegram(msg)
+
+    async def _notify_merge(self, new_trade: TradeRecord, merged: TradeRecord) -> None:
+        mode = "PAPER" if merged.paper else "LIVE"
+        msg = (
+            f"[{mode}] Merged into {merged.asset} {merged.direction} "
+            f"{merged.timeframe} {merged.side}\n"
+            f"Added: ${new_trade.size_usd:.2f} @ {new_trade.price:.4f}\n"
+            f"Total: ${merged.size_usd:.2f} @ {merged.price:.4f} (avg)\n"
+            f"Edge: {merged.edge:.2%}  Confidence: {merged.confidence:.2%}"
         )
         await self._send_telegram(msg)
 

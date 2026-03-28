@@ -47,6 +47,16 @@ class TradeStatus(StrEnum):
     OPEN = "OPEN"
     CLOSED = "CLOSED"
     CANCELLED = "CANCELLED"
+    CLAIMED = "CLAIMED"
+    MERGED = "MERGED"
+
+
+class MarketOutcome(StrEnum):
+    """Resolved outcome for a Polymarket condition."""
+
+    YES = "YES"
+    NO = "NO"
+    UNRESOLVED = "UNRESOLVED"
 
 
 # ======================================================================
@@ -128,5 +138,12 @@ class TradeRecord:
     edge: float
     confidence: float
     paper: bool
+    condition_id: str = ""
+    token_id: str = ""
     pnl: float | None = None
     status: TradeStatus = TradeStatus.OPEN
+
+    @property
+    def market_key(self) -> str:
+        """Unique key for the market this trade belongs to."""
+        return f"{self.asset}_{self.direction}_{self.timeframe}_{self.side}"

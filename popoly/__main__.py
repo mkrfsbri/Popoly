@@ -10,6 +10,7 @@ import time
 
 from popoly.config import Config
 from popoly.dashboard.display import Dashboard
+from popoly.execution.claim_manager import ClaimManager
 from popoly.execution.executor import Executor
 from popoly.execution.paper_trader import PaperTrader
 from popoly.execution.position_manager import PositionManager
@@ -48,6 +49,14 @@ class Bot:
             database=self.db,
             telegram=self.telegram,
             position_manager=self.position_manager,
+        )
+        self.claim_manager = ClaimManager(
+            config=config,
+            position_manager=self.position_manager,
+            portfolio=self.portfolio,
+            price_cache=self.price_cache,
+            database=self.db,
+            telegram=self.telegram,
         )
         self.opportunity_detector = OpportunityDetector(config)
         self.confidence_scorer = ConfidenceScorer()
@@ -211,6 +220,7 @@ class Bot:
                     name="kill_switch",
                 )
                 tg.create_task(self._strategy_loop(), name="strategy")
+                tg.create_task(self.claim_manager.run(), name="claim_manager")
                 tg.create_task(
                     self.dashboard.run(self._get_current_prices_async),
                     name="dashboard",

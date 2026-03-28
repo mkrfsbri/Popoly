@@ -80,10 +80,7 @@ class Portfolio:
         is_entry:
             ``True`` when opening a new position, ``False`` when closing.
         """
-        key = (trade.condition_id, trade.token_id) if hasattr(trade, "condition_id") else (
-            f"{trade.asset}_{trade.direction}_{trade.timeframe}",
-            f"{trade.side}",
-        )
+        key = (trade.market_key, trade.token_id or trade.side)
 
         if is_entry:
             self.cash -= trade.size_usd
