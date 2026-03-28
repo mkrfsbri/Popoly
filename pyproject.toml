@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "popoly"
+version = "0.1.0"
+description = "Polymarket latency arbitrage bot"
+requires-python = ">=3.11"
+dependencies = [
+    "py-clob-client>=0.34",
+    "websockets>=12.0",
+    "aiosqlite>=0.19",
+    "rich>=13.0",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+]
+
+[project.scripts]
+popoly = "popoly.__main__:main"
