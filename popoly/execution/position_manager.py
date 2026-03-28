@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 
-from popoly.types import TradeRecord, TradeStatus
+from popoly.types import Side, TradeRecord, TradeStatus
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +142,33 @@ class PositionManager:
         return self._positions.get(tid)
 
     # ------------------------------------------------------------------
-    # Merge logic
+    # CTF merge pair detection
+    # ------------------------------------------------------------------
+
+    def find_mergeable_pairs(self) -> list[tuple[TradeRecord, TradeRecord]]:
+        """Find open YES+NO position pairs on the same condition.
+
+        Returns a list of ``(yes_position, no_position)`` tuples where
+        both sides are OPEN on the same condition (asset/direction/
+        timeframe).  These pairs can be sent to the CTF
+        ``mergePositions`` call to reclaim USDC.e collateral.
+        """
+        by_condition: dict[str, dict[str, TradeRecord]] = {}
+        for pos in self.get_open_positions():
+            ckey = pos.condition_key
+            by_condition.setdefault(ckey, {})[pos.side] = pos
+
+        pairs: list[tuple[TradeRecord, TradeRecord]] = []
+        for _ckey, sides in by_condition.items():
+            yes_pos = sides.get(Side.YES)
+            no_pos = sides.get(Side.NO)
+            if yes_pos is not None and no_pos is not None:
+                pairs.append((yes_pos, no_pos))
+
+        return pairs
+
+    # ------------------------------------------------------------------
+    # Same-side position merge (weighted average)
     # ------------------------------------------------------------------
 
     @staticmethod

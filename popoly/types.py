@@ -85,8 +85,10 @@ class MarketOdds:
     best_bid: float
     best_ask: float
     condition_id: str
-    token_id: str
+    token_id: str  # YES token id (kept for backward compat)
     timestamp: datetime
+    yes_token_id: str = ""
+    no_token_id: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,5 +147,10 @@ class TradeRecord:
 
     @property
     def market_key(self) -> str:
-        """Unique key for the market this trade belongs to."""
+        """Unique key for the market this trade belongs to (side-specific)."""
         return f"{self.asset}_{self.direction}_{self.timeframe}_{self.side}"
+
+    @property
+    def condition_key(self) -> str:
+        """Key for the condition (side-agnostic), used to find YES+NO pairs."""
+        return f"{self.asset}_{self.direction}_{self.timeframe}"

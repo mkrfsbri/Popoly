@@ -11,6 +11,7 @@ import time
 from popoly.config import Config
 from popoly.dashboard.display import Dashboard
 from popoly.execution.claim_manager import ClaimManager
+from popoly.execution.ctf import CTFOperator
 from popoly.execution.executor import Executor
 from popoly.execution.paper_trader import PaperTrader
 from popoly.execution.position_manager import PositionManager
@@ -50,11 +51,16 @@ class Bot:
             telegram=self.telegram,
             position_manager=self.position_manager,
         )
+        self.ctf = CTFOperator(
+            polymarket_api_url=config.polymarket_api_url,
+            private_key=config.private_key,
+        ) if config.is_live else None
         self.claim_manager = ClaimManager(
             config=config,
             position_manager=self.position_manager,
             portfolio=self.portfolio,
             price_cache=self.price_cache,
+            ctf=self.ctf,
             database=self.db,
             telegram=self.telegram,
         )

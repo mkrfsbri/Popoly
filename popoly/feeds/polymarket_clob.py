@@ -37,7 +37,10 @@ def _market_key(asset: Asset, direction: Direction, timeframe: Timeframe) -> str
 class _MarketInfo:
     """Metadata for a single discovered Polymarket condition."""
 
-    __slots__ = ("asset", "direction", "timeframe", "condition_id", "token_id")
+    __slots__ = (
+        "asset", "direction", "timeframe", "condition_id",
+        "token_id", "yes_token_id", "no_token_id",
+    )
 
     def __init__(
         self,
@@ -46,12 +49,16 @@ class _MarketInfo:
         timeframe: Timeframe,
         condition_id: str,
         token_id: str,
+        yes_token_id: str = "",
+        no_token_id: str = "",
     ) -> None:
         self.asset = asset
         self.direction = direction
         self.timeframe = timeframe
         self.condition_id = condition_id
         self.token_id = token_id
+        self.yes_token_id = yes_token_id
+        self.no_token_id = no_token_id
 
 
 class PolymarketFeed:
@@ -191,21 +198,47 @@ class PolymarketFeed:
                     if isinstance(market, dict)
                     else getattr(market, "condition_id", "")
                 )
-                # Tokens are typically nested; grab the first token id.
+                # Extract YES and NO token IDs from the tokens list.
                 tokens = (
                     market.get("tokens", [])
                     if isinstance(market, dict)
                     else getattr(market, "tokens", [])
                 )
-                token_id = ""
-                if tokens:
+                yes_token_id = ""
+                no_token_id = ""
+                for tok in tokens:
+                    tok_id = (
+                        tok.get("token_id", "")
+                        if isinstance(tok, dict)
+                        else getattr(tok, "token_id", "")
+                    )
+                    outcome = (
+                        tok.get("outcome", "")
+                        if isinstance(tok, dict)
+                        else getattr(tok, "outcome", "")
+                    )
+                    if outcome.upper() == "YES":
+                        yes_token_id = tok_id
+                    elif outcome.upper() == "NO":
+                        no_token_id = tok_id
+
+                # Fallback: if outcomes not labelled, use positional.
+                if not yes_token_id and tokens:
                     first_token = tokens[0]
-                    token_id = (
+                    yes_token_id = (
                         first_token.get("token_id", "")
                         if isinstance(first_token, dict)
                         else getattr(first_token, "token_id", "")
                     )
+                if not no_token_id and len(tokens) > 1:
+                    second_token = tokens[1]
+                    no_token_id = (
+                        second_token.get("token_id", "")
+                        if isinstance(second_token, dict)
+                        else getattr(second_token, "token_id", "")
+                    )
 
+                token_id = yes_token_id or no_token_id
                 if condition_id and token_id:
                     return _MarketInfo(
                         asset=asset,
@@ -213,6 +246,8 @@ class PolymarketFeed:
                         timeframe=timeframe,
                         condition_id=condition_id,
                         token_id=token_id,
+                        yes_token_id=yes_token_id,
+                        no_token_id=no_token_id,
                     )
 
         return None
@@ -259,6 +294,8 @@ class PolymarketFeed:
             condition_id=condition_id,
             token_id=token_id,
             timestamp=datetime.now(timezone.utc),
+            yes_token_id=market_info.yes_token_id,
+            no_token_id=market_info.no_token_id,
         )
 
         key = _market_key(market_info.asset, market_info.direction, market_info.timeframe)
